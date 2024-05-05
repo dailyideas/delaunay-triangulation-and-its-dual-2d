@@ -2,16 +2,14 @@ from abc import ABC, abstractmethod
 from collections import defaultdict, deque
 import logging
 
+import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import NDArray
 import scipy
+from scipy.spatial import voronoi_plot_2d
 
 from . import exceptions, util
 from .geometry import BoundingBox2d, CentroidHelper, CircumcircleHelper
-
-if __debug__:
-    import matplotlib.pyplot as plt
-    from scipy.spatial import voronoi_plot_2d
 
 
 logger = logging.getLogger(__name__)
