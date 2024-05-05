@@ -1,6 +1,7 @@
 .tmp/
 .vscode/
 tmp.*
+delaunay_triangulation_and_its_dual_2d/_version.py
 
 
 # Byte-compiled / optimized / DLL files

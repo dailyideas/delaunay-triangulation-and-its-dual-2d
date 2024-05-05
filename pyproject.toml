@@ -13,15 +13,28 @@ requires-python = ">=3.8"
 
 [project.optional-dependencies]
 dev = ["black"]
+dist = ["build", "twine"]
 test = ["coverage", "matplotlib", "pytest", "tox"]
+
+[project.urls]
+Homepage = "https://github.com/dailyideas/delaunay-triangulation-and-its-dual-2d"
 
 [tool.black]
 line-length = 79
 skip-string-normalization = true
 target-version = ["py38"]
 
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q"
+testpaths = ["tests"]
+
 [tool.setuptools]
 packages = ["delaunay_triangulation_and_its_dual_2d"]
+
+[tool.setuptools_scm]
+local_scheme = "no-local-version"
+version_file = "delaunay_triangulation_and_its_dual_2d/_version.py"
 
 [tool.tox]
 legacy_tox_ini = """
