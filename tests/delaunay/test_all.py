@@ -5,6 +5,7 @@ import scipy
 import scipy.spatial
 
 import delaunay_triangulation_and_its_dual_2d
+import delaunay_triangulation_and_its_dual_2d.exceptions
 
 
 def _sort_rows(array: NDArray) -> NDArray:
@@ -194,6 +195,6 @@ def test_compute_voronoi_diagram_raises_duplicated_circumcenters_error():
     )
     delaunay = delaunay_triangulation_and_its_dual_2d.Delaunay(points=points)
     with pytest.raises(
-        delaunay_triangulation_and_its_dual_2d.DuplicatedCircumcentersError
+        delaunay_triangulation_and_its_dual_2d.exceptions.DuplicatedCircumcentersError
     ):
         delaunay.compute_voronoi_tessellation()
