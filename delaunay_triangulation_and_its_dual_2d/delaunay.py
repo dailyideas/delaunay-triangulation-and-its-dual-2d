@@ -44,6 +44,13 @@ class Base(ABC):
         self._voronoi_vertices: NDArray[np.float_]
         self._barycentric_dual_vertices: NDArray[np.float_]
 
+        self._delaunay_edge_to_triangle_indices_mapping: dict[
+            tuple[int, int], list[int]
+        ]
+        self._dual_edges_to_delaunay_edges_mapping: dict[
+            tuple[int, int], tuple[int, int]
+        ]
+
     @property
     def points(self) -> NDArray[np.float_]:
         return self._points
@@ -81,6 +88,13 @@ class Base(ABC):
     def barycentric_dual_vertices(self) -> NDArray[np.float_]:
         self.compute_barycentric_dual()
         return self._barycentric_dual_vertices
+
+    @property
+    def dual_edges_to_delaunay_edges_mapping(
+        self,
+    ) -> dict[tuple[int, int], tuple[int, int]]:
+        self._compute_dual_edges_to_delaunay_edges_mapping()
+        return self._dual_edges_to_delaunay_edges_mapping
 
     @staticmethod
     def _check_points_validity(points: NDArray[np.float_]) -> bool:
@@ -234,6 +248,10 @@ class Base(ABC):
 
     @abstractmethod
     def _compute_ridges_and_regions(self) -> None:
+        pass
+
+    @abstractmethod
+    def _compute_dual_edges_to_delaunay_edges_mapping(self) -> None:
         pass
 
     def get_mocked_scipy_spatial_delaunay(self) -> util.MockedDelaunay:
@@ -430,7 +448,27 @@ class Delaunay(Base):
         self._ridge_points = ridge_points
         self._ridge_vertices = ridge_vertices
         self._regions = regions
+        self._delaunay_edge_to_triangle_indices_mapping = dict(
+            delaunay_edge_to_triangle_indices_mapping
+        )
         self._ridges_and_regions_computed = True
+
+    def _compute_dual_edges_to_delaunay_edges_mapping(self):
+        self._compute_ridges_and_regions()
+        dual_edges_to_delaunay_edges_mapping = {}
+        for (
+            delaunay_edge,
+            triangle_indices,
+        ) in self._delaunay_edge_to_triangle_indices_mapping.items():
+            if len(triangle_indices) == 1:
+                continue
+            assert len(triangle_indices) == 2
+            dual_edges_to_delaunay_edges_mapping[
+                (triangle_indices[0], triangle_indices[1])
+            ] = delaunay_edge
+        self._dual_edges_to_delaunay_edges_mapping = (
+            dual_edges_to_delaunay_edges_mapping
+        )
 
     def compute_delaunay_triangulation(self) -> None:
         if self._delaunay_triangulation_computed:
