@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict, deque
 import logging
+from typing import Literal
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -44,6 +45,13 @@ class Base(ABC):
         self._voronoi_vertices: NDArray[np.float_]
         self._barycentric_dual_vertices: NDArray[np.float_]
 
+        self._delaunay_edge_to_triangle_indices_mapping: dict[
+            tuple[int, int], list[int]
+        ]
+        self._dual_edges_to_delaunay_edges_mapping: dict[
+            tuple[int, int], tuple[int, int]
+        ]
+
     @property
     def points(self) -> NDArray[np.float_]:
         return self._points
@@ -81,6 +89,13 @@ class Base(ABC):
     def barycentric_dual_vertices(self) -> NDArray[np.float_]:
         self.compute_barycentric_dual()
         return self._barycentric_dual_vertices
+
+    @property
+    def dual_edges_to_delaunay_edges_mapping(
+        self,
+    ) -> dict[tuple[int, int], tuple[int, int]]:
+        self._compute_dual_edges_to_delaunay_edges_mapping()
+        return self._dual_edges_to_delaunay_edges_mapping
 
     @staticmethod
     def _check_points_validity(points: NDArray[np.float_]) -> bool:
@@ -235,6 +250,86 @@ class Base(ABC):
     @abstractmethod
     def _compute_ridges_and_regions(self) -> None:
         pass
+
+    @abstractmethod
+    def _compute_dual_edges_to_delaunay_edges_mapping(self) -> None:
+        pass
+
+    # @staticmethod
+    # def _are_line_segments_within_rectangle(
+    #     min_x: float,
+    #     min_y: float,
+    #     max_x: float,
+    #     max_y: float,
+    #     line_segments: NDArray[np.float_],
+    # ) -> NDArray[np.bool_]:
+    #     """
+    #     Args:
+    #         line_segments: numpy array of shape (N, 2, 2), where N is the
+    #         number of line segments, the 1st "2" denotes the start and end
+    #         points of the each line segment and the 2nd "2" denotes the
+    #         (x, y) coordinates of the points.
+    #     """
+    #     bounds = np.array([[min_x, min_y], [max_x, max_y]])
+    #     return np.all(
+    #         (line_segments >= bounds[0]) & (line_segments <= bounds[1]),
+    #         axis=(1, 2),
+    #     )
+
+    def _compute_bounded_line_segments_of_dual(
+        self, dual: Literal["voronoi", "barycentric"]
+    ) -> NDArray[np.float_]:
+        if dual == "voronoi":
+            dual_vertices = self.voronoi_vertices
+        elif dual == "barycentric":
+            dual_vertices = self.barycentric_dual_vertices
+        else:
+            raise ValueError(
+                f"Unexpected value for dual: {dual}. Expected either 'voronoi' or 'barycentric'."
+            )
+        self._compute_ridges_and_regions()
+        ridge_vertices = np.array(self._ridge_vertices, dtype=np.int_)
+        mask = ridge_vertices[:, 1] == -1
+        target_indices = ridge_vertices[mask, 0]
+        target_vertices = dual_vertices[target_indices]
+        num_of_vertices = len(target_vertices)
+        min_x = self._bounding_box.min_x
+        min_y = self._bounding_box.min_y
+        max_x = self._bounding_box.max_x
+        max_y = self._bounding_box.max_y
+        candidates = np.empty((num_of_vertices, 4, 2), dtype=np.float_)
+        candidates[:, 0] = np.column_stack(
+            (target_vertices[:, 0], np.full(num_of_vertices, min_y))
+        )
+        candidates[:, 1] = np.column_stack(
+            (target_vertices[:, 0], np.full(num_of_vertices, max_y))
+        )
+        candidates[:, 2] = np.column_stack(
+            (np.full(num_of_vertices, min_x), target_vertices[:, 1])
+        )
+        candidates[:, 3] = np.column_stack(
+            (np.full(num_of_vertices, max_x), target_vertices[:, 1])
+        )
+        distances_between_targets_and_candidates = np.linalg.norm(
+            np.expand_dims(target_vertices, axis=1) - candidates, axis=2
+        )
+        chosen_candidates_index = np.argmin(
+            distances_between_targets_and_candidates, axis=1
+        )
+        chosen_candidates = candidates[
+            np.arange(num_of_vertices), chosen_candidates_index, :
+        ]
+        unbounded_line_segments = np.empty(
+            (len(ridge_vertices), 2, 2), dtype=np.float_
+        )
+        unbounded_line_segments[mask] = np.stack(
+            (target_vertices, chosen_candidates), axis=1
+        )
+        unbounded_line_segments[~mask] = dual_vertices[ridge_vertices[~mask]]
+        bounded_line_segments = self._bounding_box.clip_line_segments(
+            line_segments=unbounded_line_segments
+        )
+        return bounded_line_segments
 
     def get_mocked_scipy_spatial_delaunay(self) -> util.MockedDelaunay:
         """Get an object to be used as the argument in
@@ -430,7 +525,27 @@ class Delaunay(Base):
         self._ridge_points = ridge_points
         self._ridge_vertices = ridge_vertices
         self._regions = regions
+        self._delaunay_edge_to_triangle_indices_mapping = dict(
+            delaunay_edge_to_triangle_indices_mapping
+        )
         self._ridges_and_regions_computed = True
+
+    def _compute_dual_edges_to_delaunay_edges_mapping(self) -> None:
+        self._compute_ridges_and_regions()
+        dual_edges_to_delaunay_edges_mapping = {}
+        for (
+            delaunay_edge,
+            triangle_indices,
+        ) in self._delaunay_edge_to_triangle_indices_mapping.items():
+            if len(triangle_indices) == 1:
+                continue
+            assert len(triangle_indices) == 2
+            dual_edges_to_delaunay_edges_mapping[
+                (triangle_indices[0], triangle_indices[1])
+            ] = delaunay_edge
+        self._dual_edges_to_delaunay_edges_mapping = (
+            dual_edges_to_delaunay_edges_mapping
+        )
 
     def compute_delaunay_triangulation(self) -> None:
         if self._delaunay_triangulation_computed:
