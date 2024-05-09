@@ -276,7 +276,7 @@ class Base(ABC):
     #         axis=(1, 2),
     #     )
 
-    def _compute_bounded_line_segments_of_dual(
+    def compute_bounded_line_segments_of_dual(
         self, dual: Literal["voronoi", "barycentric"]
     ) -> NDArray[np.float_]:
         if dual == "voronoi":

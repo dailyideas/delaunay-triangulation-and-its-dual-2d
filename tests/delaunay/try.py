@@ -64,7 +64,7 @@ def try_compute_bounded_line_segments_of_dual():
         dtype=np.float32,
     )
     delaunay = delaunay_triangulation_and_its_dual_2d.Delaunay(points=points)
-    bounded_line_segments = delaunay._compute_bounded_line_segments_of_dual(
+    bounded_line_segments = delaunay.compute_bounded_line_segments_of_dual(
         dual="voronoi"
     )
     print("bounded_line_segments.shape: ", bounded_line_segments.shape)
