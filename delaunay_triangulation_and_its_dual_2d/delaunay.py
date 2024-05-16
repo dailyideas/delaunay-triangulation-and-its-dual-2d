@@ -3,11 +3,9 @@ from collections import defaultdict, deque
 import logging
 from typing import Literal
 
-import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import NDArray
 import scipy
-from scipy.spatial import voronoi_plot_2d
 
 from . import exceptions, util
 from .geometry import BoundingBox2d, CentroidHelper, CircumcircleHelper
@@ -113,26 +111,6 @@ class Base(ABC):
     def _duplicated_points_exist(points: NDArray[np.float32]) -> bool:
         _, count = np.unique(points, axis=0, return_counts=True)
         return np.any(count > 1).item()
-
-    @staticmethod
-    def _plot_voronoi_diagram(
-        voronoi_diagram: scipy.spatial._qhull.Voronoi,
-        bounding_box: BoundingBox2d,
-    ):
-        fig = voronoi_plot_2d(
-            voronoi_diagram,
-            show_vertices=False,
-            line_colors="orange",
-            line_alpha=0.6,
-            point_size=2,
-        )
-        ax = fig.axes[0]
-        lower_lim, upper_lim = np.min(bounding_box.min_), np.max(
-            bounding_box.max_
-        )
-        ax.set_xlim(lower_lim, upper_lim)
-        ax.set_ylim(lower_lim, upper_lim)
-        plt.show()
 
     @classmethod
     def _jitter_points_on_overlap(
@@ -396,9 +374,6 @@ class Base(ABC):
             points_with_dilated_bounding_box_vertices,
             # qhull_options="Qbb Qc Qx",
         )
-        if __debug__:
-            if debug:
-                cls._plot_voronoi_diagram(voronoi_diagram=voronoi_diagram)
 
         new_points = cls._compute_centroids_of_voronoi_diagram(
             voronoi_diagram=voronoi_diagram,
