@@ -7,6 +7,7 @@ import scipy.spatial
 
 import delaunay_triangulation_and_its_dual_2d
 import delaunay_triangulation_and_its_dual_2d.exceptions
+import delaunay_triangulation_and_its_dual_2d.geometry
 
 
 def visualize_mocked_scipy_spatial_delaunay_and_voronoi():
@@ -58,12 +59,30 @@ def visualize_mocked_scipy_spatial_delaunay_and_voronoi():
 #     plt.show()
 
 
-def try_compute_bounded_line_segments_of_dual():
+def try_compute_bounded_line_segments_of_dual_from_predefined_points():
     points = np.array(
         [[0, 0], [3, 0], [1, 1], [3, 2], [4, 2], [1, 3], [2, 4], [4, 4]],
         dtype=np.float32,
     )
     delaunay = delaunay_triangulation_and_its_dual_2d.Delaunay(points=points)
+    bounded_line_segments = delaunay.compute_bounded_line_segments_of_dual(
+        dual="voronoi"
+    )
+    print("bounded_line_segments.shape: ", bounded_line_segments.shape)
+
+
+def try_compute_bounded_line_segments_of_dual_from_random_points():
+    lower_bound = 0.0
+    upper_bound = 1.0
+    rng = np.random.default_rng()
+    points = rng.uniform(low=lower_bound, high=upper_bound, size=(10, 2))
+    delaunay = delaunay_triangulation_and_its_dual_2d.Delaunay(
+        points=points,
+        bounding_box=delaunay_triangulation_and_its_dual_2d.geometry.BoundingBox2d(
+            min_=np.array([lower_bound, lower_bound], dtype=np.float_),
+            max_=np.array([upper_bound, upper_bound], dtype=np.float_),
+        ),
+    )
     bounded_line_segments = delaunay.compute_bounded_line_segments_of_dual(
         dual="voronoi"
     )

@@ -15,7 +15,9 @@ logger = logging.getLogger(__name__)
 
 
 class Base(ABC):
-    def __init__(self, *, points: NDArray[np.float_]) -> None:
+    def __init__(
+        self, *, points: NDArray[np.float_], bounding_box: BoundingBox2d | None
+    ) -> None:
         """
 
         Args:
@@ -23,6 +25,8 @@ class Base(ABC):
                 A collection of "n" 2D points arranged in the Cartesian
                 coordinate system with the axis order (x, y) and having a shape
                 of (n, 2).
+            bounding_box:
+                An optional bounding box specifying the boundary of points
         """
         assert self._check_points_validity(points=points)
 
@@ -32,8 +36,16 @@ class Base(ABC):
         self._voronoi_tessellation_computed: bool = False
         self._barycentric_dual_computed: bool = False
 
-        self._bounding_box: BoundingBox2d = self._compute_bounding_box(
-            points=points
+        if bounding_box is not None and (
+            np.any(np.min(points, axis=0) < bounding_box.min_)
+            or np.any(np.max(points, axis=0) > bounding_box.max_)
+        ):
+            raise ValueError("The points are not within the bounding box")
+
+        self._bounding_box: BoundingBox2d = (
+            self._compute_bounding_box(points=points)
+            if bounding_box is None
+            else bounding_box
         )
 
         self._triangles: NDArray[np.intc]
@@ -386,8 +398,10 @@ class Base(ABC):
 
 
 class Delaunay(Base):
-    def __init__(self, *, points: NDArray[np.float_]) -> None:
-        super().__init__(points=points)
+    def __init__(
+        self, *, points: NDArray[np.float_], bounding_box: BoundingBox2d | None
+    ) -> None:
+        super().__init__(points=points, bounding_box=bounding_box)
 
         self.compute_delaunay_triangulation()
 

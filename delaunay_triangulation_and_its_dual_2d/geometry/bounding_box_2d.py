@@ -91,21 +91,18 @@ class BoundingBox2d:
         t_exit = np.ones_like(x1)
 
         for i in range(4):
-            is_parallel = p[i] == 0
+            is_parallel = np.isclose(p[i], 0)
             outside_parallel = np.logical_and(is_parallel, q[i] < 0)
-            # t = np.where(p[i] != 0, q[i] / p[i], np.inf)
+            t_enter[outside_parallel] = np.nan
+            t_exit[outside_parallel] = np.nan
             # To avoid RuntimeWarning: divide by zero encountered in divide
             t = np.divide(
-                q[i], p[i], out=np.full_like(q[i], np.inf), where=p[i] != 0
+                q[i], p[i], out=np.full_like(q[i], np.inf), where=~is_parallel
             )
-            t_enter = np.where(
-                np.logical_and(p[i] < 0, ~outside_parallel),
-                np.maximum(t_enter, t),
-                t_enter,
-            )
+            t_enter = np.where(p[i] < 0, np.maximum(t_enter, t), t_enter)
             t_exit = np.where(p[i] > 0, np.minimum(t_exit, t), t_exit)
 
-        outside = t_enter > t_exit
+        outside = np.logical_or(np.isnan(t_enter), t_enter > t_exit)
         x1_clip = np.where(~outside, x1 + t_enter * dx, np.nan)
         y1_clip = np.where(~outside, y1 + t_enter * dy, np.nan)
         x2_clip = np.where(~outside, x1 + t_exit * dx, np.nan)
