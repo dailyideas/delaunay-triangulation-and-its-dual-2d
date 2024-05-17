@@ -399,7 +399,10 @@ class Base(ABC):
 
 class Delaunay(Base):
     def __init__(
-        self, *, points: NDArray[np.float_], bounding_box: BoundingBox2d | None
+        self,
+        *,
+        points: NDArray[np.float_],
+        bounding_box: BoundingBox2d | None = None,
     ) -> None:
         super().__init__(points=points, bounding_box=bounding_box)
 
