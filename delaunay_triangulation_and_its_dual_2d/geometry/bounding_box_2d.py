@@ -73,6 +73,11 @@ class BoundingBox2d:
     def liang_barsky_line_clipping(
         self, line_segments: NDArray[np.float_]
     ) -> NDArray[np.float_]:
+        """
+
+        References:
+            - Liang-Barsky Algorithm. [link](https://www.geeksforgeeks.org/liang-barsky-algorithm/)
+        """
         x1, y1 = line_segments[:, 0].T
         x2, y2 = line_segments[:, 1].T
         dx = x2 - x1
